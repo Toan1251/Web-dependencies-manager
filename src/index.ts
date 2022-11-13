@@ -26,6 +26,5 @@ app.listen(PORT, () => {
 
 
 
-// crawl("https://www.facebook.com/groups/sportsbook2vn", "www.facebook.com", "sportbook2vn").then(hyperlinks => console.log(hyperlinks));
-crawlData("https://www.facebook.com/groups/sportsbook2vn").then(data => log(data, "sportbook2vn.html"));
-crawlData("https://www.facebook.com/groups/sportsbook2vn").then(data => console.log(data));
+crawl("https://github.com/Toan1251/HelloWorldAndroid", "github.com", "Toan1251/HelloWorldAndroid").then(hyperlinks => console.log(hyperlinks));
+
