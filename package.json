@@ -3,11 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsc && node -r dotenv/config build/index.js",
-    "build": "tsc -p .",
-    "dev": "nodemon -e ts,js,json --watch 'src/**/*.ts' --ignore 'src/**/*.spec.ts'"
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
   },
   "keywords": [],
   "author": "",

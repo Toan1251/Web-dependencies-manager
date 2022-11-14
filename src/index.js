@@ -3,8 +3,9 @@ import dotenv from "dotenv";
 import cors from "cors";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
-import {crawl, crawlUrl, crawlData} from "./utils/crawl"
-import {log} from "./utils/logger"
+import {crawl, crawlUrl, crawlData} from "./utils/crawl.js"
+import {log} from "./utils/logger.js"
+import * as urlParser from "url";
 
 // config
 dotenv.config();
@@ -17,14 +18,21 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
+app.post('/linkedlist', async (req, res) => {
+    let data;
+    try{
+        data = await crawl(req.body.url, req.body.domain, req.body.module, req.body.ignore);
+        console.log(data);
+    }catch(e){
+        res.status(404).send(e.message);
+    }
+    res.status(200).send(data)
+})
+
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
     console.log(`Server is running at ${PORT}`);
-}).setTimeout(600 * 1000)
+}).setTimeout(3600 * 1000)
 
-
-
-
-crawl("https://github.com/Toan1251/HelloWorldAndroid", "github.com", "Toan1251/HelloWorldAndroid").then(hyperlinks => console.log(hyperlinks));
 
