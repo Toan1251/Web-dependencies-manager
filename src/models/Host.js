@@ -12,7 +12,7 @@ const HostSchema = mongoose.Schema({
     protocol:{
         type: String,
     },
-    module: {
+    Project: {
         type: Array,
         default: [],
     }

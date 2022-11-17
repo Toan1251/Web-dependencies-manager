@@ -1,17 +1,17 @@
 import mongoose from "mongoose";
 
 const dependencySchema = mongoose.Schema({
-    dependencies: {
-        name: {
-            type:String,
-            required: true
-        },
-        version: {
-            type:String,
-            required: true,
-        },
-        required:true,
-        unique:true,
+    name: {
+        type:String,
+        required: true
+    },
+    version: {
+        type:String,
+        required: true,
+    },
+
+    isLastest: {
+        type:Boolean,
     },
 
     url: {

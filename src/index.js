@@ -4,7 +4,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
 import {crawl} from "./utils/crawl.js"
-import {log} from "./utils/logger.js"
+import hostRouter from "./routers/host.js"
 
 // config
 dotenv.config();
@@ -17,6 +17,8 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
+
+app.use('/host', hostRouter)
 app.post('/linkedlist', async (req, res) => {
     let data;
     try{

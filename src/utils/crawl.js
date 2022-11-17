@@ -128,3 +128,4 @@ const clearCache = () => {
     acceptedUrl = [];
     linksQueue = [];
 }
+
