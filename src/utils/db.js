@@ -1,8 +1,43 @@
 import models from '../models/Models.js';
 
-export const saveObject = async (obj, model) => {
-    const mongooseModel = models[model];
+const getModel = (model) => {
+    return models[model];
+}
+
+const createUpdateObj = (method, update) => {
+    return JSON.parse(`{
+        "$${method}": ${JSON.stringify(update)}
+    }`)
+}
+
+const createObject = async (obj, model) => {
+    const mongooseModel = getModel(model);
     const saveObj = await new mongooseModel(obj);
     await saveObj.save();
     return saveObj;
+}
+
+const findObject = async (obj, model) => {
+    const mongooseModel = getModel(model);
+    const foundObj = await mongooseModel.findOne({obj});
+    return foundObj;
+}
+
+const updateObject = async (filter, update, method, model) => {
+    const mongooseModel = getModel(model);
+    const updObj = await mongooseModel.updateOne(filter, createUpdateObj(method, update));
+    return updObj;
+}
+
+const deleteObject = async (filter, model) => {
+    const mongooseModel = getModel(model);
+    const delObj = await mongooseModel.deleteOne(filter);
+    return delObj;
+}
+
+export default {
+    createObject,
+    findObject,
+    updateObject,
+    deleteObject
 }
