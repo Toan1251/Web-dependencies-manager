@@ -3,9 +3,8 @@ import dotenv from "dotenv";
 import cors from "cors";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
-import {crawl, crawlUrl, crawlData} from "./utils/crawl.js"
+import {crawl} from "./utils/crawl.js"
 import {log} from "./utils/logger.js"
-import * as urlParser from "url";
 
 // config
 dotenv.config();
