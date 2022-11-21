@@ -17,10 +17,16 @@ const createObject = async (obj, model) => {
     return saveObj;
 }
 
-const findObject = async (obj, model) => {
+const findObject = async (filter, model) => {
     const mongooseModel = getModel(model);
-    const foundObj = await mongooseModel.findOne({obj});
+    const foundObj = await mongooseModel.findOne({filter});
     return foundObj;
+}
+
+const findAllObjects = async (filter, model) => {
+    const mongooseModel = getModel(model);
+    const foundAll = await mongooseModel.find({filter});
+    return foundAll;
 }
 
 const updateObject = async (filter, update, method, model) => {
@@ -38,6 +44,7 @@ const deleteObject = async (filter, model) => {
 export default {
     createObject,
     findObject,
+    findAllObjects,
     updateObject,
     deleteObject
 }

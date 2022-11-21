@@ -1,15 +1,14 @@
 import mongoose from "mongoose";
 
+// Schema for project
 const projectSchema = mongoose.Schema({
-    hostId: {
+    root_url: {
         type:String,
         required:true
     },
-    root_urlId: {
+    config_url: {
         type:String,
-    },
-    config_fileId: {
-        type:String,
+        default: ''
     },
     name: {
         type:String,
@@ -17,9 +16,23 @@ const projectSchema = mongoose.Schema({
         min: 5,
         max: 50
     },
-    last_modified: {
-        type:Date,
+    dependencies: {
+        type:Array,
+        default: [],
         required:true
+    },
+    devDependencies: {
+        type:Array,
+        default: [],
+        required:true
+    },
+    commits: {
+        type: Array,
+        default: [],
+    },
+    branches: {
+        type: Array,
+        default: [],
     }
 }, {timestamps: true})
 

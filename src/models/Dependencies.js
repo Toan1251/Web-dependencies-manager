@@ -1,24 +1,35 @@
 import mongoose from "mongoose";
 
+// Schema for dependency
 const dependencySchema = mongoose.Schema({
     name: {
         type:String,
         required: true
     },
     version: {
-        type:String,
-        required: true,
+        major: {
+            type: Number,
+            default: 0,
+            required: true
+        },
+        minor: {
+            type: Number,
+            default: 0,
+            required: true
+        },
+        patch:{
+            type: Number,
+            default: 0,
+            required: true
+        },
+        pre_release: {
+            type: String,
+        }
     },
 
     isLastest: {
         type:Boolean,
-    },
-
-    url: {
-        type:Array,
-        default: [],
-    },
+    }
 },{timestamps: true})
 
 export default mongoose.model('Dependency', dependencySchema)
-

@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+// Schema for Url
 const urlSchema = mongoose.Schema({
     url: {
         type:String,
@@ -7,9 +8,9 @@ const urlSchema = mongoose.Schema({
     },
     projectId:{
         type:String,
-        required:true
+        default: ""
     },
-    links: {
+    directlinks: {
         type:Array,
         default: []
     },

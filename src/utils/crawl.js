@@ -1,6 +1,7 @@
 import axios from 'axios';
 import cheerio from 'cheerio';
 import urlParser from 'url';
+import db from './db.js'
 
 let seenUrl = {};
 let limitCount = 0;
@@ -31,6 +32,7 @@ const deleteBookmark = url => {
     return url;
 }
 
+// checking if url have a special string
 const isUrlHave = (url, checkstring) => {
     const checkstringList = checkstring.split(',');
     const filter = checkstringList.map(str => str.trim()).filter(str => url.includes(str));
@@ -38,6 +40,7 @@ const isUrlHave = (url, checkstring) => {
     else return true;
 }
 
+// checking if url is valid
 const checkValidUrl = (url, domain, module, ignore, limit) => {
     if(limit < limitCount) return false
     if(!isUrlHave(url,domain)) return false;
@@ -47,8 +50,8 @@ const checkValidUrl = (url, domain, module, ignore, limit) => {
     return true;
 }
 
-// crawl a url, return {hyperlinks with url, resource type}
-export const crawl = async (url="", domain="", module="", ignore="///", limit=5000) => {
+// crawl a url, return {hyperlinks with url, resource type
+const crawlBot = async (url, domain, module, ignore, limit) => {
     // prepare
     linksQueue.push(url);
 
@@ -66,14 +69,24 @@ export const crawl = async (url="", domain="", module="", ignore="///", limit=50
         try{
             const {hyperlinks, urlType} = await getUrlAttributes(nextUrl);
             const {host, protocol} = urlParser.parse(nextUrl);
+            const directlinks = []
             hyperlinks.forEach(link => {
-                linksQueue.push(getUrl(link, host, protocol))
-            })
+                directlinks.push(getUrl(link, host, protocol))
+            });
+            linksQueue.push(...directlinks);
 
             // counter
             limitCount++;
             console.log(`Crawling ${limitCount} ${nextUrl}`);
             acceptedUrl.push(nextUrl);
+            
+            //save to db
+            const newUrl = await db.createObject({
+                url: nextUrl,
+                directlinks: directlinks,
+                type: urlType
+            }, 'url')
+
         }catch (e){
             console.log(`${nextUrl} can't be reached`);
             // crawl(linksQueue.shift(), domain, module, ignore, limit);
@@ -85,42 +98,39 @@ export const crawl = async (url="", domain="", module="", ignore="///", limit=50
     return acceptedUrl;
 }
 
+
+// load data from url by cheerio
+export const cheerioLoader = async url => {
+    try{
+        const res = await axios.get(url);
+        const data = res.data;
+        const $ = cheerio.load(data);
+        return $;
+    }catch (e){
+        console.log(e.message);
+    }
+}
+
 // get resource type
-const getUrlAttributes = async (url) => {
-    const res = await axios.get(url);
-    const html = await res.data;
-    const $ = cheerio.load(html);
+// input    @url: an url want to get type
+// return   {hyperlink, urlType}
+//          @hyperlinks: a list of hyperlink was pointing to on this url
+//          @urlType: type of data
+export const getUrlAttributes = async (url) => {
+    const $ = await cheerioLoader(url);
     const links = $("a").map((i, link) => link.attribs.href).get();
 
     let type;
     if(links.length !== 0) type = "page";
     else if(url.endsWith("package.json")) type = "nodejs dependencies config"
     else if(url.endsWith("pom.xml")) type = "maven dependencies config"
-    else if(url.endsWith("app/build.gradle")) type = "gradle dependencies config"
+    else if(url.endsWith("build.gradle")) type = "gradle dependencies config"
     else type = url.split(".").pop();
     return {
         hyperlinks: links,
         urlType: type
     }
 }
-
-// BFS crawl hyperlinks
-// export const crawl = async (url="", domain="", module="", ignore="///", limit=1000) => {
-//     linksQueue.push(url);
-//     while (linksQueue.length > 0){
-//         try{
-//             await crawlUrl(linksQueue.shift(), domain, module, ignore, limit);
-//         }catch(e){
-//             //console.log(e.message);
-//             continue;
-//         }
-//     }
-
-//     //clear data and return
-//     const data = acceptedUrl;
-//     clearCache();
-//     return data;
-// }
 
 const clearCache = () => {
     seenUrl = {};
@@ -129,3 +139,10 @@ const clearCache = () => {
     linksQueue = [];
 }
 
+export const crawl = async (url="", domain="", module="", ignore="///", limit=1000) => {
+    const hyperlinks = await crawlBot(url, domain, module, ignore, limit);
+    clearCache();
+    return hyperlinks;
+}
+
+export default crawl;
