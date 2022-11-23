@@ -4,6 +4,7 @@ import axios  from "axios";
 import gPP from "../utils/getProjectProperty.js";
 import db from "../utils/db.js"
 import crawl from "../utils/crawl.js"
+import cf from '../utils/config.js'
 
 const router = express.Router();
 
@@ -21,16 +22,13 @@ router.post('/', async (req, res) => {
             branches: branches
         }, 'project')
         branches.shift();
-        console.log(branches)
-        console.log(commits)
         const ignore = req.body.ignore;
         let newIgnore = `${branches.join(',')},${commits.join(',')},${ignore}`;
         if (newIgnore.startsWith(',')){
             newIgnore = newIgnore.substring(1, newIgnore.length)
         }
-        console.log(newIgnore);
         
-        // crawl and save data
+        // crawl and save urls
         const urlList = await crawl(root_url, req.body.domain, req.body.module, newIgnore);
         const updateUrl = [];
         urlList.forEach(ele => {
@@ -41,10 +39,33 @@ router.post('/', async (req, res) => {
         const urlAfterUpdate = await db.findAllObjects({projectId: newProject._id}, 'url');
         res.status(200).send(urlAfterUpdate);
 
+        // assign config to project
+        const configUrls = await db.findAllObjects({
+            projectId: newProject._id,
+            type: 'config'
+        }, 'url')
+
+        configUrls.forEach(async url => {
+            const dependenciesList = await cf.getConfig(url.url);
+            dependenciesList.forEach(async dp => {
+                let dependencyObj = await db.findObject(dp, 'dependency');
+                if(dependencyObj == null){
+                    dependencyObj = await db.createObject(dp, 'dependency');
+                }
+                await db.updateObject(
+                    {_id: newProject._id},
+                    {dependencies: dependencyObj._id},
+                    'push',
+                    'project'
+                )
+            })
+        })
     }catch (e){
         console.log(e.message);
     }
 })
+
+router.get('/:projectName,')
 
 
 export default router;

@@ -19,13 +19,13 @@ const createObject = async (obj, model) => {
 
 const findObject = async (filter, model) => {
     const mongooseModel = getModel(model);
-    const foundObj = await mongooseModel.findOne({filter});
+    const foundObj = await mongooseModel.findOne(filter);
     return foundObj;
 }
 
 const findAllObjects = async (filter, model) => {
     const mongooseModel = getModel(model);
-    const foundAll = await mongooseModel.find({filter});
+    const foundAll = await mongooseModel.find(filter);
     return foundAll;
 }
 

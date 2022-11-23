@@ -4,7 +4,8 @@ import mongoose from "mongoose";
 const urlSchema = mongoose.Schema({
     url: {
         type:String,
-        required:true
+        required:true,
+        unique:true,
     },
     projectId:{
         type:String,

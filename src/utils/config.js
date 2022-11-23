@@ -4,9 +4,8 @@ import g2js from './g2js.js'
 
 // get a list of dependencies config from config file
 // input    @url:raw project config url
-//          @option: (nodejs, maven or gradle dependencies config), type of project config
 // return:  A list of dependencies object: {name: dependency name, version: minimum dependency version}
-const getConfig = async (url, option) => {
+const getConfig = async (url) => {
     let data;
     try{
         const res = await axios.get(url)
@@ -14,17 +13,15 @@ const getConfig = async (url, option) => {
     }catch(e){
         throw new Error(`Could not get config from ${url}`);
     }
+    const dependenciesList = await getConfigData(url, data);
+    return getConfigData(url, data)
+}
 
-    switch(option){
-        case 'nodejs dependencies config':
-            return getConfigNode(data);
-        case 'maven dependencies config':
-            return getConfigMaven(data);
-        case 'gradle dependencies config':
-            return await getConfigGradle(data);
-        default:
-            throw new Error(`missing option`);
-    }
+const getConfigData = async (url, data) => {
+    if(url.endsWith('package.json')) return getConfigNode(data);
+    else if(url.endsWith('pom.xml')) return getConfigMaven(data);
+    else if(url.endsWith('build.gradle')) return await getConfigGradle(data);
+    else throw new Error('not a config url');
 }
 
 // use for nodejs option
@@ -37,7 +34,6 @@ const getConfigNode = data => {
             version: getVersion(value)
         })
     }
-    console.log(dependenciesList);
     return dependenciesList;
 }
 
@@ -87,10 +83,13 @@ const getConfigMaven = data => {
 
 // use for gradle option
 const getConfigGradle = async (data) => {
-    const configObj = await g2js.parseText(data);
-    const dependencies = configObj.dependencies
     const dependenciesList = [];
-    
+    const configObj = await g2js.parseText(data);
+    const dependencies = configObj.dependencies;
+    if (dependencies == undefined) {
+        return dependenciesList;
+
+    }
     dependencies.forEach(dependency => {
         let dependencyName = `${dependency.group}/${dependency.name}`;
         dependenciesList.push({
@@ -98,6 +97,7 @@ const getConfigGradle = async (data) => {
             version: getVersion(dependency.version)
         })
     })
+
     return dependenciesList;
 }
 

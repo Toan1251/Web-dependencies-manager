@@ -81,12 +81,14 @@ const crawlBot = async (url, domain, module, ignore, limit) => {
             acceptedUrl.push(nextUrl);
             
             //save to db
-            const newUrl = await db.createObject({
-                url: nextUrl,
-                directlinks: directlinks,
-                type: urlType
-            }, 'url')
-
+            const nextUrlObj = await db.findObject({url: nextUrl}, 'url');
+            if(nextUrlObj == null){
+                const newUrlObj = await db.createObject({
+                    url: nextUrl,
+                    directlinks: directlinks,
+                    type: urlType
+                }, 'url')
+            }
         }catch (e){
             console.log(`${nextUrl} can't be reached`);
             // crawl(linksQueue.shift(), domain, module, ignore, limit);
@@ -122,9 +124,7 @@ export const getUrlAttributes = async (url) => {
 
     let type;
     if(links.length !== 0) type = "page";
-    else if(url.endsWith("package.json")) type = "nodejs dependencies config"
-    else if(url.endsWith("pom.xml")) type = "maven dependencies config"
-    else if(url.endsWith("build.gradle")) type = "gradle dependencies config"
+    else if(url.endsWith("package.json") || url.endsWith("pom.xml") || url.endsWith("build.gradle")) type = "config"
     else type = url.split(".").pop();
     return {
         hyperlinks: links,

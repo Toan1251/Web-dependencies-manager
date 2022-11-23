@@ -5,7 +5,7 @@ import bodyParser from "body-parser";
 import mongoose from "mongoose";
 import {crawl} from "./utils/crawl.js"
 import projectRouter from './routers/project.js'
-
+import db from './utils/db.js'
 // config
 dotenv.config();
 mongoose.connect(process.env.MONGO_CONNECTION, ()=>{
@@ -28,8 +28,6 @@ app.post('/linkedlist', async (req, res) => {
     }
     res.status(200).send(data)
 })
-
-
 
 
 const PORT = process.env.PORT || 3000
