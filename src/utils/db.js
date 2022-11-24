@@ -1,7 +1,7 @@
 import models from '../models/Models.js';
 
 const getModel = (model) => {
-    return models[model];
+    return models[model.toLowerCase()];
 }
 
 const createUpdateObj = (method, update) => {
