@@ -10,12 +10,20 @@ const getBranches = async (url) => {
 
 // get all commit from a project with root_url project
 const getCommits = async (url) => {
-    const branch = await getBranches(url);
-    const $ = await cheerioLoader(`${url}/commits/${branch[0]}`);
-    const commits = $('ol li p a').map((i, commit) => {
-        const cm = commit.attribs.href.split('/');
-        return cm.pop();
-    }).get();
+    const branches = await getBranches(url);
+    const commits = [];
+    while (branches.length > 0) {
+        const branch = branches.shift();
+        const $ = await cheerioLoader(`${url}/commits/${branch}`);
+        const commitOfBranch = $('ol li p a').map((i, commit) => commit.attribs.href.split('/').pop());
+        const temp = commitOfBranch.filter(cm => !commits.includes(cm));
+        commits.push(...temp);
+    }
+
+    // const cmms = $('ol li p a').map((i, commit) => {
+    //     const cm = commit.attribs.href.split('/');
+    //     return cm.pop();
+    // }).get();
     return commits;
 }
 

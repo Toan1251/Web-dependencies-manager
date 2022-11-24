@@ -6,10 +6,6 @@ const projectSchema = mongoose.Schema({
         type:String,
         required:true
     },
-    config_url: {
-        type:String,
-        default: ''
-    },
     name: {
         type:String,
         required:true,

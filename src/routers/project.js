@@ -18,7 +18,9 @@ router.post('/', async (req, res) => {
     try{
         // set up
         const branches = await gPP.getBranches(root_url);
+        console.log(branches);
         const commits = await gPP.getCommits(root_url);
+        console.log(commits);
         const name = root_url.split('/').pop();
         const newProject = await db.createObject({
             root_url: root_url,
