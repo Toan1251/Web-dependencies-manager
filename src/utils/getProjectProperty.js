@@ -19,11 +19,6 @@ const getCommits = async (url) => {
         const temp = commitOfBranch.filter(cm => !commits.includes(cm));
         commits.push(...temp);
     }
-
-    // const cmms = $('ol li p a').map((i, commit) => {
-    //     const cm = commit.attribs.href.split('/');
-    //     return cm.pop();
-    // }).get();
     return commits;
 }
 

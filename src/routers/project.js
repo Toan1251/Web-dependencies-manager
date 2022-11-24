@@ -18,9 +18,7 @@ router.post('/', async (req, res) => {
     try{
         // set up
         const branches = await gPP.getBranches(root_url);
-        console.log(branches);
         const commits = await gPP.getCommits(root_url);
-        console.log(commits);
         const name = root_url.split('/').pop();
         const newProject = await db.createObject({
             root_url: root_url,
@@ -45,6 +43,9 @@ router.post('/', async (req, res) => {
         const update = await Promise.all(updateUrl)
         const urlAfterUpdate = await db.findAllObjects({projectId: newProject._id}, 'url');
 
+        setTimeout(() =>{
+            res.status(302).redirect(`/project/${newProject._id}`);
+        }, 5000)
 
         // assign config to project
         const configUrls = await db.findAllObjects({
@@ -52,35 +53,26 @@ router.post('/', async (req, res) => {
             type: 'config'
         }, 'url')
 
-        const returnDependency = []
-        const configs = [];
-        configUrls.forEach(async url => {
-            const dependenciesList = await cf.getConfig(url.url);
-            configs.push(...dependenciesList);
-            dependenciesList.forEach(async dp => {
-                let dependencyObj = await db.findObject(dp, 'dependency');
-                if(dependencyObj == null){
-                    dependencyObj = await db.createObject(dp, 'dependency');
-                }
-                returnDependency.push(dependencyObj);
-                await db.updateObject(
-                    {_id: newProject._id},
-                    {dependencies: dependencyObj._id},
-                    'push',
-                    'project'
-                )
+        const fn = async(isDev=false) => {
+            configUrls.forEach(async url => {
+                const dependenciesList = await cf.getConfig(url.url, isDev);
+                dependenciesList.forEach(async dp => {
+                    let dependencyObj = await db.findObject(dp, 'dependency');
+                    if(dependencyObj == null){
+                        dependencyObj = await db.createObject(dp, 'dependency');
+                    }
+                    await db.updateObject(
+                        {_id: newProject._id},
+                        isDev ? {devDependencies: dependencyObj._id} : {dependencies: dependencyObj._id},
+                        'push',
+                        'project'
+                    )
+                });
             });
-        })
-
-        //direct to get project
-        const redirect = () => {
-            if(returnDependency.length == configs.length && configs.length != 0){
-                res.status(302).redirect(`/project/${newProject._id}`);
-            }else {
-                setTimeout(redirect, 1000)
-            }
         }
-        redirect(); 
+        fn();
+        fn(true);
+
     }catch (e){
         console.log(e.message);
     }
@@ -90,25 +82,28 @@ router.get('/:projectId', async (req, res) => {
     try{
         //find project
         const project = await db.findObject({_id: req.params.projectId}, 'project');
-        const dependencyIds = project.dependencies;
 
+        const fn = async(isDev=false) => {
+            const dependenciesPromise = [];
+            let ids = isDev ? project.devDependencies : project.dependencies
+            ids.forEach(id => {
+                dependenciesPromise.push(db.findObject({_id: id}, 'dependency'))
+            })
+            const dependenciesList = await Promise.all(dependenciesPromise);
+            const dependencies = dependenciesList.map(dependencyObj => {
+                return {
+                    name: dependencyObj.name,
+                    ver: dependencyObj.version
+                }
+            })
+            return dependencies
+        }
         //find project dependencies
-        const dependenciesPromise = [];
-        dependencyIds.forEach(id => {
-            dependenciesPromise.push(db.findObject({_id: id}, 'dependency'))
-        })
-        const dependenciesList = await Promise.all(dependenciesPromise);
-        const dependencies = dependenciesList.map(dependencyObj => {
-            return {
-                name: dependencyObj.name,
-                ver: dependencyObj.version
-            }
-        })
-
         res.status(200).send({
             name: project.name,
             root_url: project.root_url,
-            dependencies: dependencies
+            dependencies: await fn(),
+            devDependencies: await fn(true)
         })
     }catch (e){
         console.log(e.message);
