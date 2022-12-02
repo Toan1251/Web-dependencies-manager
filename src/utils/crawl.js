@@ -2,27 +2,9 @@ import axios from 'axios';
 import cheerio from 'cheerio';
 import urlParser from 'url';
 import db from './db.js'
+import puppeteer from 'puppeteer'
+import browser from './constants.js'
 
-let seenUrl = {};
-let limitCount = 0;
-let acceptedUrl = [];
-let linksQueue = [];
-
-// getUrl to fetch
-const getUrl = (link, host, protocol) => {
-    let url;
-    if (link.startsWith("http")) {
-        url = link;
-    } else if (link.startsWith("//")) {
-        url = `${protocol}${link}`;
-    } else if(link.startsWith("/")){
-        url = `${protocol}//${host}${link}`;
-    }
-    else {
-        url = `${protocol}//${host}/${link}`;
-    }
-    return deleteBookmark(url);
-};
 
 // delete bookmark #
 const deleteBookmark = url => {
@@ -41,7 +23,7 @@ const isUrlHave = (url, checkstring) => {
 }
 
 // checking if url is valid
-const checkValidUrl = (url, domain, module, ignore, limit) => {
+const checkValidUrl = (url, domain, module, ignore, limit,seenUrl, limitCount) => {
     if(limit < limitCount) return false
     if(!isUrlHave(url,domain)) return false;
     if(!isUrlHave(url,module)) return false;
@@ -50,30 +32,39 @@ const checkValidUrl = (url, domain, module, ignore, limit) => {
     return true;
 }
 
+const fillData = arr => {
+    return [...new Set(arr)];
+}
+
 // crawl a url, return {hyperlinks with url, resource type
 const crawlBot = async (url, domain, module, ignore, limit) => {
     // prepare
-    linksQueue.push(url);
+    // linksQueue.push(url);
+    let limitCount = 0;
+    let seenUrl = {};
+    let acceptedUrl = [];
+    let linksQueue = [url];
 
     // BFS crawl hyperlinks
     while (linksQueue.length > 0 && limitCount < limit) {
         const nextUrl = linksQueue.shift();
 
         // filter and validate
-        if(!checkValidUrl(nextUrl,domain, module, ignore, limit)) {
+        if(!checkValidUrl(nextUrl,domain, module, ignore, limit, seenUrl, limitCount)) {
             continue;
         }else{
             seenUrl[nextUrl] = true;
         }
 
         try{
+            try{
+                await axios.get(nextUrl);
+            }catch(e){
+                console.log(`${nextUrl} is not exist`);
+                continue;
+            }
             const {hyperlinks, urlType} = await getUrlAttributes(nextUrl);
-            const {host, protocol} = urlParser.parse(nextUrl);
-            const directlinks = []
-            hyperlinks.forEach(link => {
-                directlinks.push(getUrl(link, host, protocol))
-            });
-            linksQueue.push(...directlinks);
+            linksQueue.push(...hyperlinks);
 
             // counter
             limitCount++;
@@ -85,12 +76,12 @@ const crawlBot = async (url, domain, module, ignore, limit) => {
             if(nextUrlObj == null){
                 const newUrlObj = await db.createObject({
                     url: nextUrl,
-                    directlinks: directlinks,
+                    directlinks: hyperlinks,
                     type: urlType
                 }, 'url')
             }
         }catch (e){
-            console.log(`${nextUrl} can't be reached`);
+            console.log(e);
             // crawl(linksQueue.shift(), domain, module, ignore, limit);
             continue;
         }
@@ -100,49 +91,71 @@ const crawlBot = async (url, domain, module, ignore, limit) => {
     return acceptedUrl;
 }
 
-
-// load data from url by cheerio
-export const cheerioLoader = async url => {
-    try{
-        const res = await axios.get(url);
-        const data = res.data;
-        const $ = cheerio.load(data);
-        return $;
-    }catch (e){
-        console.log(e.message);
-    }
-}
-
 // get resource type
 // input    @url: an url want to get type
 // return   {hyperlink, urlType}
 //          @hyperlinks: a list of hyperlink was pointing to on this url
 //          @urlType: type of data
-export const getUrlAttributes = async (url) => {
-    const $ = await cheerioLoader(url);
-    const links = $("a").map((i, link) => link.attribs.href).get();
-
-    let type;
-    if(links.length !== 0) type = "page";
-    else if(url.endsWith("package.json") || url.endsWith("pom.xml") || url.endsWith("build.gradle")) type = "config"
-    else type = url.split(".").pop();
-    return {
-        hyperlinks: links,
-        urlType: type
+const getUrlAttributes = async (url) => {
+    let links = [];
+    const page = browser.page;
+    try{
+        await page.goto(url);
+        await page.waitForSelector('a', {timeout: 2500})
+        links = await page.$$eval('a', elements => elements.map(ele => ele.href));
+        links = links.map(link => deleteBookmark(link));
+        links = fillData(links)
+    }catch(e){
+        console.log(e);
+    }finally{
+        let type;
+        if(links.length !== 0) type = "page";
+        else if(url.endsWith("package.json") || url.endsWith("pom.xml") || url.endsWith("build.gradle")) type = "config"
+        else type = url.split(".").pop().toLowerCase();
+        return {
+            hyperlinks: links,
+            urlType: type
+        }
     }
 }
 
-const clearCache = () => {
-    seenUrl = {};
-    limitCount = 0;
-    acceptedUrl = [];
-    linksQueue = [];
+const getAllData = async url => {
+    const page = browser.page;
+    let links, scripts, img, css, archon
+    try{
+        await page.goto(url);
+        await page.waitForSelector('a', {timeout: 1500});
+
+        links = await page.$$eval('link', links => links.map(link => link.href));
+        
+        scripts = await page.$$eval('script', scripts => scripts.map(script => script.src));
+        img = (await page.$$eval('img', images => images.map(img => img.src)))
+        .concat(await page.$$eval('link[rel*="icon"]', links => links.map(link => link.href)));
+        css = await page.$$eval('link[rel="stylesheet"]', links => links.map(link => link.href));
+        archon = (await page.$$eval('a', archons => archons.map(a => a.href))).map(a => deleteBookmark(a));
+    }catch (e){
+        console.log(e)
+    }
+    links = fillData(links);
+    scripts = fillData(scripts);
+    img = fillData(img);
+    css = fillData(css);
+    archon = fillData(archon);
+
+    return {
+        stylesheet: css,
+        images: img,
+        scripts: scripts,
+        hyperlinks: archon
+    }
 }
 
 export const crawl = async (url="", domain="", module="", ignore="///", limit=1000) => {
     const hyperlinks = await crawlBot(url, domain, module, ignore, limit);
-    clearCache();
     return hyperlinks;
 }
 
-export default crawl;
+export default {
+    crawl,
+    getAllData
+}

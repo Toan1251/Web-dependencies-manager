@@ -29,6 +29,13 @@ const findAllObjects = async (filter, model) => {
     return foundAll;
 }
 
+const fillAny = async (str) => {
+    const returnObj = [];
+    models.forEach(model => {
+        const keys = Object.keys(model.schema.obj);
+    })
+}
+
 const updateObject = async (filter, update, method, model) => {
     const mongooseModel = getModel(model);
     const updObj = await mongooseModel.updateOne(filter, createUpdateObj(method, update));

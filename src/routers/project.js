@@ -1,6 +1,4 @@
-import mongoose  from "mongoose";
 import express from "express";
-import axios  from "axios";
 import gPP from "../utils/getProjectProperty.js";
 import db from "../utils/db.js"
 import crawl from "../utils/crawl.js"
@@ -34,7 +32,7 @@ router.post('/', async (req, res) => {
         }
         
         // crawl and save urls
-        const urlList = await crawl(root_url, req.body.domain, req.body.module, newIgnore);
+        const urlList = await crawl.crawl(root_url, req.body.domain, req.body.module, newIgnore);
         const updateUrl = [];
         urlList.forEach(ele => {
             updateUrl.push(db.updateObject({url: ele}, {projectId: newProject._id}, 'set', 'url'
@@ -109,6 +107,8 @@ router.get('/:projectId', async (req, res) => {
         console.log(e.message);
     }
 })
+
+
 
 
 
