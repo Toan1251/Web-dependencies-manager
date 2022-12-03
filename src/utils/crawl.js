@@ -3,7 +3,6 @@ import cheerio from 'cheerio';
 import urlParser from 'url';
 import db from './db.js'
 import puppeteer from 'puppeteer'
-import browser from './constants.js'
 import helper from './helper.js';
 
 const getUrl = (link, host, protocol) => {
@@ -118,27 +117,50 @@ const getUrlAttributes = async (url) => {
 }
 
 const getAllData = async url => {
-    const page = browser.page;
+    const browser = await puppeteer.launch({headless: true});
+    const page = await browser.newPage();
+    page.setDefaultTimeout(15000);
     let links, scripts, img, css, archon
     try{
         await page.goto(url);
-        await page.waitForSelector('a', {timeout: 1500});
 
         links = await page.$$eval('link', links => links.map(link => link.href));
-        
         scripts = await page.$$eval('script', scripts => scripts.map(script => script.src));
+        css = await page.$$eval('link[rel="stylesheet"]', links => links.map(link => link.href));
         img = (await page.$$eval('img', images => images.map(img => img.src)))
         .concat(await page.$$eval('link[rel*="icon"]', links => links.map(link => link.href)));
-        css = await page.$$eval('link[rel="stylesheet"]', links => links.map(link => link.href));
-        archon = (await page.$$eval('a', archons => archons.map(a => a.href))).map(a => deleteBookmark(a));
+        archon = await page.$$eval('a', archons => archons.map(a => a.href));
+        let pH = 0;
+        while(pH < await page.evaluate("document.body.scrollHeight")){
+            try{
+                pH = await page.evaluate("document.body.scrollHeight");
+                await page.evaluate("window.scrollTo(0, document.body.scrollHeight)");
+                await page.waitForFunction(
+                    `document.body.scrollHeight > ${pH}`,
+                    {timeout: 3000}
+                );
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+                img = img.concat(await page.$$eval('img', images => images.map(img => img.src)));
+                archon = archon.concat(await page.$$eval('a', archons => archons.map(a => a.href)));
+            }catch (e){
+                console.log(e);
+                continue;
+            }
+        }
     }catch (e){
         console.log(e)
     }
+
+    await page.close();
+    await browser.close();
+
     links = helper.getUnique(links);
     scripts = helper.getUnique(scripts);
     img = helper.getUnique(img);
     css = helper.getUnique(css);
-    archon = helper.getUnique(archon);
+    archon = helper.getUnique(archon.map(a => deleteBookmark(a)));
+
+
 
     return {
         stylesheet: css,
