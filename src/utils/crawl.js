@@ -4,8 +4,22 @@ import urlParser from 'url';
 import db from './db.js'
 import puppeteer from 'puppeteer'
 import browser from './constants.js'
+import helper from './helper.js';
 
-
+const getUrl = (link, host, protocol) => {
+    let url;
+    if (link.startsWith("http")) {
+        url = link;
+    } else if (link.startsWith("//")) {
+        url = `${protocol}${link}`;
+    } else if(link.startsWith("/")){
+        url = `${protocol}//${host}${link}`;
+    }
+    else {
+        url = `${protocol}//${host}/${link}`;
+    }
+    return deleteBookmark(url);
+};
 // delete bookmark #
 const deleteBookmark = url => {
     if(url.includes("#")){
@@ -32,10 +46,6 @@ const checkValidUrl = (url, domain, module, ignore, limit,seenUrl, limitCount) =
     return true;
 }
 
-const fillData = arr => {
-    return [...new Set(arr)];
-}
-
 // crawl a url, return {hyperlinks with url, resource type
 const crawlBot = async (url, domain, module, ignore, limit) => {
     // prepare
@@ -57,14 +67,13 @@ const crawlBot = async (url, domain, module, ignore, limit) => {
         }
 
         try{
-            try{
-                await axios.get(nextUrl);
-            }catch(e){
-                console.log(`${nextUrl} is not exist`);
-                continue;
-            }
             const {hyperlinks, urlType} = await getUrlAttributes(nextUrl);
-            linksQueue.push(...hyperlinks);
+            const {host, protocol} = urlParser.parse(nextUrl);
+            const directlinks = []
+            hyperlinks.forEach(link => {
+                directlinks.push(getUrl(link, host, protocol))
+            });
+            linksQueue.push(...helper.getUnique(directlinks));
 
             // counter
             limitCount++;
@@ -76,17 +85,15 @@ const crawlBot = async (url, domain, module, ignore, limit) => {
             if(nextUrlObj == null){
                 const newUrlObj = await db.createObject({
                     url: nextUrl,
-                    directlinks: hyperlinks,
+                    directlinks: directlinks,
                     type: urlType
                 }, 'url')
             }
         }catch (e){
-            console.log(e);
-            // crawl(linksQueue.shift(), domain, module, ignore, limit);
+            console.log(`${nextUrl} can't be reached`);
             continue;
         }
     }    
-
     console.log(`crawl full`)
     return acceptedUrl;
 }
@@ -97,25 +104,16 @@ const crawlBot = async (url, domain, module, ignore, limit) => {
 //          @hyperlinks: a list of hyperlink was pointing to on this url
 //          @urlType: type of data
 const getUrlAttributes = async (url) => {
-    let links = [];
-    const page = browser.page;
-    try{
-        await page.goto(url);
-        await page.waitForSelector('a', {timeout: 2500})
-        links = await page.$$eval('a', elements => elements.map(ele => ele.href));
-        links = links.map(link => deleteBookmark(link));
-        links = fillData(links)
-    }catch(e){
-        console.log(e);
-    }finally{
-        let type;
-        if(links.length !== 0) type = "page";
-        else if(url.endsWith("package.json") || url.endsWith("pom.xml") || url.endsWith("build.gradle")) type = "config"
-        else type = url.split(".").pop().toLowerCase();
-        return {
-            hyperlinks: links,
-            urlType: type
-        }
+    const $ = await helper.cheerioLoader(url);
+    const links = $("a").map((i, link) => link.attribs.href).get();
+
+    let type;
+    if(links.length !== 0) type = "page";
+    else if(url.endsWith("package.json") || url.endsWith("pom.xml") || url.endsWith("build.gradle")) type = "config"
+    else type = url.split(".").pop();
+    return {
+        hyperlinks: links,
+        urlType: type
     }
 }
 
@@ -136,11 +134,11 @@ const getAllData = async url => {
     }catch (e){
         console.log(e)
     }
-    links = fillData(links);
-    scripts = fillData(scripts);
-    img = fillData(img);
-    css = fillData(css);
-    archon = fillData(archon);
+    links = helper.getUnique(links);
+    scripts = helper.getUnique(scripts);
+    img = helper.getUnique(img);
+    css = helper.getUnique(css);
+    archon = helper.getUnique(archon);
 
     return {
         stylesheet: css,

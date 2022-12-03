@@ -1,42 +1,24 @@
-import puppeteer from 'puppeteer'
-import browser from './constants.js'
-
+import helper from './helper.js';
 
 // get all branch from a project with root_url project
 const getBranches = async (url) => {
-    const page = browser.page;
-    let branches;
-    try{
-        await page.goto(`${url}/branches`);
-        await page.waitForSelector('ul li branch-filter-item', {timeout: 3000});
-        branches = await page.$$eval("ul li branch-filter-item", elements => elements.map(e => e.branch))
-    }catch (e){
-        console.log(e);
-    }finally{
-        return branches;
-    }
+    const $ = await helper.cheerioLoader(`${url}/branches`);
+    const branches = $('ul li branch-filter-item').map((i, branch) => branch.attribs.branch).get();
+    return branches;
 }
 
 
 // get all commit from a project with root_url project
 const getCommits = async (url) => {
-    const page = browser.page;
-    try{
-        const branches = await getBranches(url);
-        let commits = [];
-
-        while (branches.length > 0) {
-            const branch = branches.shift();
-            await page.goto(`${url}/commits/${branch}`);
-            await page.waitForSelector('ol li p a' ,{timeout: 3000});
-            const commitOfBranch = await page.$$eval("ol li p a", elements => elements.map(e => e.href.split('/').pop()));
-            commits.push(...commitOfBranch)
-        }
-        commits = [...new Set(commits)];
-        return commits;
-    }catch (e){
-        console.log(e);
+    const branches = await getBranches(url);
+    const commits = [];
+    while (branches.length > 0) {
+        const branch = branches.shift();
+        const $ = await helper.cheerioLoader(`${url}/commits/${branch}`);
+        const commitOfBranch = $('ol li p a').map((i, commit) => commit.attribs.href.split('/').pop());
+        commits.push(...commitOfBranch);
     }
+    return helper.getUnique(commits);
 }
 
 export default {
