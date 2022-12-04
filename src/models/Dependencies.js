@@ -26,9 +26,9 @@ const dependencySchema = mongoose.Schema({
             type: String,
         }
     },
-
-    isLastest: {
-        type:Boolean,
+    language: {
+        type: String,
+        default: ""
     }
 },{timestamps: true})
 

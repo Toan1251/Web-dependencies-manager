@@ -50,6 +50,13 @@ router.post('/', async (req, res) => {
             projectId: newProject._id,
             type: 'config'
         }, 'url')
+        
+        let language = "";
+        if(configUrls[0].url.endsWith('package.json')){
+            language = 'javascript'
+        }else if(configUrls[0][url].endsWith('pom.xml') || configUrls[0][url].endsWith('build.gradle')){
+            language = 'java'
+        }
 
         const fn = async(isDev=false) => {
             configUrls.forEach(async url => {
@@ -57,8 +64,9 @@ router.post('/', async (req, res) => {
                 dependenciesList.forEach(async dp => {
                     let dependencyObj = await db.findObject(dp, 'dependency');
                     if(dependencyObj == null){
-                        dependencyObj = await db.createObject(dp, 'dependency');
+                        dependencyObj = await db.createObject({...dp, language: language}, 'dependency');
                     }
+
                     await db.updateObject(
                         {_id: newProject._id},
                         isDev ? {devDependencies: dependencyObj._id} : {dependencies: dependencyObj._id},

@@ -7,6 +7,7 @@ import crawl from "./utils/crawl.js"
 import projectRouter from './routers/project.js'
 import db from './utils/db.js'
 import urlRouter from './routers/url.js'
+import dependencyRouter from './routers/dependency.js'
 // config
 dotenv.config();
 mongoose.connect(process.env.MONGO_CONNECTION, ()=>{
@@ -21,6 +22,7 @@ app.use(cors());
 
 app.use('/project', projectRouter);
 app.use('/url', urlRouter);
+app.use('/dependency', dependencyRouter);
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
