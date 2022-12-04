@@ -12,7 +12,25 @@ router.post('/', async (req, res) => {
     res.status(200).send({
         url: url,
         data: returnData
-    })
+    });
+
+    try{
+        let urlObject = await db.findObject({url: url}, 'url');
+        if(urlObject == null){
+            urlObject = await db.createObject({
+                url: url,
+                type: 'page'
+            }, 'url');
+        }
+        await db.updateObject(
+            {url: url},
+            {...returnData},
+            'set',
+            'url'
+        )
+    }catch (e){
+        console.log(e);
+    }
 })
 
 export default router;

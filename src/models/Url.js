@@ -11,13 +11,29 @@ const urlSchema = mongoose.Schema({
         type:String,
         default: ""
     },
-    directlinks: {
-        type:Array,
-        default: []
-    },
     type: {
         type:String,
         default: "page"
+    },
+    scripts: {
+        type:Array,
+        default: [],
+    },
+    stylesheet: {
+        type:Array,
+        default: [],
+    },
+    images: {
+        type:Array,
+        default: [],
+    },
+    hyperlinks: {
+        type:Array,
+        default: [],
+    },
+    links: {
+        type:Array,
+        default: [],
     }
 },{timestamps: true})
 

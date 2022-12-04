@@ -27,6 +27,7 @@ const deleteBookmark = url => {
     return url;
 }
 
+
 // checking if url have a special string
 const isUrlHave = (url, checkstring) => {
     const checkstringList = checkstring.split(',');
@@ -84,8 +85,8 @@ const crawlBot = async (url, domain, module, ignore, limit) => {
             if(nextUrlObj == null){
                 const newUrlObj = await db.createObject({
                     url: nextUrl,
-                    directlinks: directlinks,
-                    type: urlType
+                    type: urlType,
+                    hyperlinks: directlinks
                 }, 'url')
             }
         }catch (e){
@@ -117,11 +118,11 @@ const getUrlAttributes = async (url) => {
 }
 
 const getAllData = async url => {
-    const browser = await puppeteer.launch({headless: true});
-    const page = await browser.newPage();
-    page.setDefaultTimeout(15000);
-    let links, scripts, img, css, archon
+    let links = [], scripts = [], img = [], css = [], archon = [];
     try{
+        const browser = await puppeteer.launch({headless: false});
+        const page = await browser.newPage();
+        page.setDefaultTimeout(15000);
         await page.goto(url);
 
         links = await page.$$eval('link', links => links.map(link => link.href));
@@ -137,36 +138,32 @@ const getAllData = async url => {
                 await page.evaluate("window.scrollTo(0, document.body.scrollHeight)");
                 await page.waitForFunction(
                     `document.body.scrollHeight > ${pH}`,
-                    {timeout: 3000}
+                    {timeout: 2000}
                 );
                 await new Promise((resolve) => setTimeout(resolve, 1000));
                 img = img.concat(await page.$$eval('img', images => images.map(img => img.src)));
                 archon = archon.concat(await page.$$eval('a', archons => archons.map(a => a.href)));
             }catch (e){
-                console.log(e);
                 continue;
             }
         }
+        await page.close();
+        await browser.close();
     }catch (e){
-        console.log(e)
-    }
 
-    await page.close();
-    await browser.close();
+    }
 
     links = helper.getUnique(links);
     scripts = helper.getUnique(scripts);
     img = helper.getUnique(img);
     css = helper.getUnique(css);
     archon = helper.getUnique(archon.map(a => deleteBookmark(a)));
-
-
-
     return {
         stylesheet: css,
         images: img,
         scripts: scripts,
-        hyperlinks: archon
+        hyperlinks: archon,
+        links: links
     }
 }
 
