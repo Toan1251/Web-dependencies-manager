@@ -3,10 +3,11 @@ import dotenv from "dotenv";
 import cors from "cors";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
-import {crawl, crawlUrl, crawlData} from "./utils/crawl.js"
-import {log} from "./utils/logger.js"
-import * as urlParser from "url";
-
+import crawl from "./utils/crawl.js"
+import projectRouter from './routers/project.js'
+import db from './utils/db.js'
+import urlRouter from './routers/url.js'
+import dependencyRouter from './routers/dependency.js'
 // config
 dotenv.config();
 mongoose.connect(process.env.MONGO_CONNECTION, ()=>{
@@ -15,20 +16,13 @@ mongoose.connect(process.env.MONGO_CONNECTION, ()=>{
 
 const app = express();
 // middleware
-app.use(bodyParser.json());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }))
 app.use(cors());
 
-app.post('/linkedlist', async (req, res) => {
-    let data;
-    try{
-        data = await crawl(req.body.url, req.body.domain, req.body.module, req.body.ignore);
-        console.log(data);
-    }catch(e){
-        res.status(404).send(e.message);
-    }
-    res.status(200).send(data)
-})
-
+app.use('/project', projectRouter);
+app.use('/url', urlRouter);
+app.use('/dependency', dependencyRouter);
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
