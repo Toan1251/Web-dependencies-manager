@@ -13,7 +13,7 @@ const cheerioLoader = async (url) => {
 }
 
 const getUnique = (arr) => {
-    return [...new Set(arr)];
+    return [...new Set(arr)].filter(ele => ele !== '');
 }
 
 export default {

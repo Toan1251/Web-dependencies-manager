@@ -15,7 +15,7 @@ const getCommits = async (url) => {
     while (branches.length > 0) {
         const branch = branches.shift();
         const $ = await helper.cheerioLoader(`${url}/commits/${branch}`);
-        const commitOfBranch = $('ol li p a').map((i, commit) => commit.attribs.href.split('/').pop());
+        const commitOfBranch = $('ol li div.BtnGroup a').map((i, commit) => commit.attribs.href.split('/').pop());
         commits.push(...commitOfBranch);
     }
     return helper.getUnique(commits);

@@ -10,20 +10,28 @@ router.post('/', async (req, res) => {
     const root_url = req.body.url;
     const project = await db.findObject({root_url: root_url}, 'project');
     if(project != null) {
-        res.status(302).redirect(`/project/${project._id}`);
-        return;
+        const now = new Date();
+        const last_update = new Date(project.updatedAt);
+        if(now - last_update < 10*24*60*60*1000){
+            res.status(302).redirect(`/project/${project._id}`);
+            return;
+        }
     }
     try{
         // set up
         const branches = await gPP.getBranches(root_url);
         const commits = await gPP.getCommits(root_url);
         const name = root_url.split('/').pop();
-        const newProject = await db.createObject({
-            root_url: root_url,
-            name: name,
-            commits: commits,
-            branches: branches
-        }, 'project')
+        let newProject = project
+        if(project == null) {
+            newProject = await db.createObject({
+                root_url: root_url,
+                name: name,
+                commits: commits,
+                branches: branches
+            }, 'project')
+        }
+
         branches.shift();
         const ignore = req.body.ignore;
         let newIgnore = `${branches.join(',')},${commits.join(',')},${ignore}`;
@@ -50,11 +58,13 @@ router.post('/', async (req, res) => {
             projectId: newProject._id,
             type: 'config'
         }, 'url')
+
+        const temp = configUrls[0].url
         
         let language = "";
-        if(configUrls[0].url.endsWith('package.json')){
+        if(temp.endsWith('package.json')){
             language = 'javascript'
-        }else if(configUrls[0][url].endsWith('pom.xml') || configUrls[0][url].endsWith('build.gradle')){
+        }else if(temp.endsWith('pom.xml') || temp.endsWith('build.gradle')){
             language = 'java'
         }
 
@@ -108,11 +118,23 @@ router.get('/:projectId', async (req, res) => {
         res.status(200).send({
             name: project.name,
             root_url: project.root_url,
+            id: project._id,
             dependencies: await fn(),
             devDependencies: await fn(true)
         })
     }catch (e){
         console.log(e.message);
+    }
+})
+
+router.get('/', async (req, res) => {
+    try{
+        const projects = await db.findAllObjects({}, 'project');
+        res.status(200).send({
+            projects: projects
+        })
+    }catch(e){
+        console.log(e)
     }
 })
 

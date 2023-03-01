@@ -31,25 +31,41 @@ const deleteBookmark = url => {
 // checking if url have a special string
 const isUrlHave = (url, checkstring) => {
     const checkstringList = checkstring.split(',');
+    // console.log(checkstringList);
     const filter = checkstringList.map(str => str.trim()).filter(str => url.includes(str));
+    // console.log(filter);
     if(filter.length === 0) return false;
     else return true;
 }
 
 // checking if url is valid
 const checkValidUrl = (url, domain, module, ignore, limit,seenUrl, limitCount) => {
-    if(limit < limitCount) return false
-    if(!isUrlHave(url,domain)) return false;
-    if(!isUrlHave(url,module)) return false;
-    if(isUrlHave(url,ignore)) return false;
-    if(seenUrl[url]) return false;
+    if(limit < limitCount){
+        // console.log('over limit');
+        return false;
+    } 
+    if(!isUrlHave(url,domain)){
+        // console.log('url not have domain')
+        return false;
+    } 
+    if(!isUrlHave(url,module)){
+        // console.log('url not have module')
+        return false;
+    } 
+    if(isUrlHave(url,ignore)){
+        // console.log('url have ignore')
+        return false;
+    }
+    if(seenUrl[url]){
+        // console.log('have seen before')
+        return false;
+    } 
     return true;
 }
 
 // crawl a url, return {hyperlinks with url, resource type
 const crawlBot = async (url, domain, module, ignore, limit) => {
     // prepare
-    // linksQueue.push(url);
     let limitCount = 0;
     let seenUrl = {};
     let acceptedUrl = [];
@@ -58,9 +74,9 @@ const crawlBot = async (url, domain, module, ignore, limit) => {
     // BFS crawl hyperlinks
     while (linksQueue.length > 0 && limitCount < limit) {
         const nextUrl = linksQueue.shift();
-
         // filter and validate
-        if(!checkValidUrl(nextUrl,domain, module, ignore, limit, seenUrl, limitCount)) {
+        const valid = checkValidUrl(nextUrl,domain, module, ignore, limit, seenUrl, limitCount);
+        if(!valid) {
             continue;
         }else{
             seenUrl[nextUrl] = true;
@@ -159,7 +175,7 @@ const getAllData = async url => {
     css = helper.getUnique(css);
     archon = helper.getUnique(archon.map(a => deleteBookmark(a)));
     return {
-        stylesheet: css,
+        stylesheets: css,
         images: img,
         scripts: scripts,
         hyperlinks: archon,
